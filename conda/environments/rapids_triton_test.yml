@@ -1,0 +1,14 @@
+---
+name: rapids_triton_test
+channels:
+  - conda-forge
+dependencies:
+  - flake8
+  - pip
+  - python
+  - pytest
+  - numpy
+  - pip:
+      - nvidia-pyindex
+
+# TODO(template): Add any test dependencies for your tests here
