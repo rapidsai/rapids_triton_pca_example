@@ -1,0 +1,32 @@
+# TODO(template): Replace backend name
+backend: "REPLACE_ME"
+max_batch_size: 32768
+# TODO(template): Replace input specifications
+input [
+  {
+    name: "input__0"
+    data_type: TYPE_FP32
+    dims: [ 4 ]
+  },
+  {
+    name: "input__1"
+    data_type: TYPE_FP32
+    dims: [ 4 ]
+  }
+]
+# TODO(template): Replace output specifications
+output [
+  {
+    name: "output__0"
+    data_type: TYPE_FP32
+    dims: [ 4 ]
+  }
+]
+# TODO(template): Specify how this model should be deployed
+instance_group [{ kind: KIND_GPU }]
+# TODO(template): Add parameters if neeeded
+parameters [
+]
+dynamic_batching {
+  max_queue_delay_microseconds: 100
+}
