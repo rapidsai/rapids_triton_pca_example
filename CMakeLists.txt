@@ -18,8 +18,7 @@ cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 
 ##############################################################################
 # - Target names -------------------------------------------------------------
-# TODO(template): Insert the name of your backend below
-set(BACKEND_NAME "REPLACE_ME")
+set(BACKEND_NAME "rapids_pca")
 set(BACKEND_TARGET "triton_${BACKEND_NAME}")
 
 
@@ -46,11 +45,12 @@ rapids_cmake_build_type(Release)
 
 # this is needed for clang-tidy runs
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+list(APPEND RAPIDS_TRITON_BACKEND_CUDA_FLAGS --expt-extended-lambda --expt-relaxed-constexpr)
 
 ##############################################################################
 # - User Options  ------------------------------------------------------------
 
-option(BUILD_BACKEND_TESTS "Build rapids_triton_linear unit-tests" ON)
+option(BUILD_BACKEND_TESTS "Build RAPIDS_TRITON_BACKEND unit-tests" ON)
 option(CUDA_ENABLE_KERNEL_INFO "Enable kernel resource usage info" OFF)
 option(CUDA_ENABLE_LINE_INFO "Enable lineinfo in nvcc" OFF)
 option(DETECT_CONDA_ENV "Enable detection of conda environment for dependencies" ON)
@@ -74,7 +74,7 @@ message(VERBOSE "RAPIDS_TRITON_BACKEND: RMM_LOGGING_LEVEL = '${RMM_LOGGING_LEVEL
 if(DETECT_CONDA_ENV)
   rapids_cmake_support_conda_env( conda_env MODIFY_PREFIX_PATH )
   if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND DEFINED ENV{CONDA_PREFIX})
-      message(STATUS "CUML: No CMAKE_INSTALL_PREFIX argument detected, setting to: $ENV{CONDA_PREFIX}")
+      message(STATUS "RAPIDS_TRITON_BACKEND: No CMAKE_INSTALL_PREFIX argument detected, setting to: $ENV{CONDA_PREFIX}")
       set(CMAKE_INSTALL_PREFIX "$ENV{CONDA_PREFIX}")
   endif()
 endif()
@@ -87,8 +87,8 @@ endif()
 # * enable the CMake CUDA language
 # * set other CUDA compilation flags
 rapids_find_package(CUDAToolkit REQUIRED
-    BUILD_EXPORT_SET cuml-exports
-    INSTALL_EXPORT_SET cuml-exports
+    BUILD_EXPORT_SET ${BACKEND_TARGET}-exports
+    INSTALL_EXPORT_SET ${BACKEND_TARGET}-exports
     )
 include(cmake/modules/ConfigureCUDA.cmake)
 
@@ -99,6 +99,7 @@ include(cmake/modules/ConfigureCUDA.cmake)
 rapids_cpm_init()
 
 include(cmake/thirdparty/get_rapids-triton.cmake)
+include(cmake/thirdparty/get_raft.cmake)
 
 if(BUILD_TESTS)
   include(cmake/thirdparty/get_gtest.cmake)
@@ -111,6 +112,7 @@ endif()
 # TODO(template): Add any additional source files below
 add_library(
   ${BACKEND_TARGET} SHARED
+  src/gpu_infer.cu
   src/api.cc
 )
 
@@ -142,17 +144,10 @@ PRIVATE
   triton-backend-utils
   "${TRITONSERVER_LIB}"
   $<TARGET_NAME_IF_EXISTS:conda_env>
+  raft::raft
 )
 
 install(
   TARGETS ${BACKEND_TARGET}
   LIBRARY DESTINATION /opt/tritonserver/backends/${BACKEND_NAME}
 )
-
-##############################################################################
-# - build test executable ----------------------------------------------------
-
-# TODO (wphicks)
-# if(BUILD_TESTS)
-#   include(test/CMakeLists.txt)
-# endif()

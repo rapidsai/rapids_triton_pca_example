@@ -1,0 +1,31 @@
+name: "pca_example"
+backend: "rapids_pca"
+max_batch_size: 32768
+input [
+  {
+    name: "X_input"
+    data_type: TYPE_FP32
+    dims: [ 4 ]
+  }
+]
+output [
+  {
+    name: "X_transformed"
+    data_type: TYPE_FP32
+    dims: [ 4 ]
+  }
+]
+instance_group [{ kind: KIND_GPU }]
+parameters [
+  {
+    key: "n_components"
+    value: { string_value: "5"}
+  },
+  {
+    key: "n_cols"
+    value: { string_value: "25"}
+  }
+]
+dynamic_batching {
+  max_queue_delay_microseconds: 100
+}
