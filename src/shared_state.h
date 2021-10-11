@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <rapids_triton/model/shared_state.hpp>
+#include <rapids_triton/triton/logging.hpp>
 
 namespace triton {
 namespace backend {
@@ -28,9 +29,15 @@ namespace NAMESPACE {
 struct RapidsSharedState : rapids::SharedModelState {
   RapidsSharedState(std::unique_ptr<common::TritonJson::Value>&& config)
       : rapids::SharedModelState{std::move(config)} {}
-  // TODO(template): Define the following only if necessary for your backend
-  /* void load() {}
-  void unload() {} */
+  void load() {
+    n_components = get_config_param<std::size_t>("n_components");
+    n_cols = get_config_param<std::size_t>("n_cols");
+  }
+  void unload() {
+    rapids::log_info(__FILE__, __LINE__) << "Unloading shared state...";
+  }
+  std::size_t n_cols = 0;
+  std::size_t n_components = 0;
 };
 
 }  // namespace NAMESPACE

@@ -15,4 +15,19 @@
  */
 
 #pragma once
-#define NAMESPACE rapids_pca
+
+#include <names.h>
+
+#include <cstddef>
+#include <rapids_triton/batch/batch.hpp>
+#include <rapids_triton/tensor/tensor.hpp>
+
+namespace triton {
+namespace backend {
+namespace NAMESPACE {
+
+void gpu_infer(const float* X_input, float* X_transformed, const float* mu, const float* components, float* X_workplace,
+               std::size_t n_components, std::size_t n_cols, std::size_t n_rows, cudaStream_t stream);
+}
+}  // namespace backend
+}  // namespace triton
