@@ -28,7 +28,7 @@
 #include <rapids_triton/triton/deployment.hpp>  // rapids::DeploymentType
 #include <rapids_triton/triton/device.hpp>      // rapids::device_id_t
 #include <rapids_triton/triton/logging.hpp>
-#include <rapids_triton/memory/detail/allocate.hpp>
+#include <rapids_triton/memory/resource.hpp>
 
 namespace triton {
 namespace backend {
@@ -49,10 +49,21 @@ struct RapidsModel : rapids::Model<RapidsSharedState> {
     auto n_cols = get_shared_state()->n_cols;
     auto n_rows = X_input.size();
     auto X_transformed = get_output<float>(batch, "X_transformed");
+    auto memory_type = rapids::MemoryType{};
+    if constexpr (rapids::IS_GPU_BUILD) {
+      if (get_deployment_type() == rapids::GPUDeployment) {
+        memory_type = rapids::DeviceMemory;
+        rapids::cuda_check(cudaSetDevice(get_device_id()));
+      } else {
+        memory_type = rapids::HostMemory;
+      }
+    } else {
+      memory_type = rapids::HostMemory;
+    }
 
-    auto X_workplace = rapids::detail::dev_allocate<float>(n_cols * n_rows, get_stream());
+    auto X_workplace = rapids::Buffer<float>(n_cols * n_rows, memory_type, get_device_id(), get_stream());
 
-    gpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace,
+    gpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
               n_components, n_cols, n_rows, get_stream());
     X_transformed.finalize();
   }
