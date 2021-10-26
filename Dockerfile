@@ -58,7 +58,7 @@ ENV BUILD_TESTS=$BUILD_TESTS
 ARG BUILD_EXAMPLE
 ENV BUILD_EXAMPLE=$BUILD_EXAMPLE
 
-RUN mkdir /rapids_triton/build
+RUN mkdir /rapids_triton/build /rapids_triton/install
 
 WORKDIR /rapids_triton/build
 
@@ -66,6 +66,10 @@ RUN cmake \
       -GNinja \
       -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
       -DBUILD_TESTS="${BUILD_TESTS}" \
+      -DCMAKE_INSTALL_PREFIX=/rapids_triton/install \
+      -DTRITON_COMMON_REPO_TAG="r${TRITON_VERSION}" \
+      -DTRITON_CORE_REPO_TAG="r${TRITON_VERSION}" \
+      -DTRITON_BACKEND_REPO_TAG="r${TRITON_VERSION}" \
       ..
 
 RUN ninja install

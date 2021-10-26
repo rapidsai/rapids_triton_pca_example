@@ -37,7 +37,7 @@ def model_output_sizes():
 def get_ground_truth(inputs):
     x = inputs['X_input']
     x_c = x - MU
-    return x_c.dot(COMPONENTS)
+    return {'X_transformed': x_c.dot(COMPONENTS)}
 
 
 @pytest.mark.parametrize(
