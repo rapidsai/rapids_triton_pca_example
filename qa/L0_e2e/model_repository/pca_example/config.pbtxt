@@ -5,14 +5,14 @@ input [
   {
     name: "X_input"
     data_type: TYPE_FP32
-    dims: [ 4 ]
+    dims: [ 25 ]
   }
 ]
 output [
   {
     name: "X_transformed"
     data_type: TYPE_FP32
-    dims: [ 4 ]
+    dims: [ 5 ]
   }
 ]
 instance_group [{ kind: KIND_GPU }]

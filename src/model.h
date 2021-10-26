@@ -28,7 +28,7 @@
 #include <rapids_triton/triton/deployment.hpp>  // rapids::DeploymentType
 #include <rapids_triton/triton/device.hpp>      // rapids::device_id_t
 #include <rapids_triton/triton/logging.hpp>
-#include <rapids_triton/memory/resource.hpp>
+#include <rapids_triton/memory/buffer.hpp>
 
 namespace triton {
 namespace backend {
@@ -43,12 +43,30 @@ struct RapidsModel : rapids::Model<RapidsSharedState> {
                                          default_stream, deployment_type,
                                          filepath) {}
 
+  void cpu_infer(const float* X_input, float* X_transformed, const float* mu, const float* components, float* X_workplace,
+               std::size_t n_components, std::size_t n_cols, std::size_t n_rows) const
+  {
+    // Mean center
+    for (std::size_t i = 0; i < n_rows; ++i) {
+      for (std::size_t j = 0; j < n_cols; ++j) {
+        X_workplace[i * n_cols + j] = X_input[i * n_cols + j] - mu[j];
+      }
+    }
+
+    // Dot product
+    for (std::size_t i = 0; i < n_rows; i++)
+      for (std::size_t j = 0; j < n_cols; j++)
+        for (std::size_t k = 0; k < n_components; k++)
+          X_transformed[i * n_components + k] += \
+           X_workplace[i * n_cols + j] * components[j * n_components + k];
+  }
+
   void predict(rapids::Batch& batch) const {
     auto X_input = get_input<float>(batch, "X_input");
+    auto X_transformed = get_output<float>(batch, "X_transformed");
     auto n_components = get_shared_state()->n_components;
     auto n_cols = get_shared_state()->n_cols;
-    auto n_rows = X_input.size();
-    auto X_transformed = get_output<float>(batch, "X_transformed");
+    auto n_rows = X_input.shape()[0];
     auto memory_type = rapids::MemoryType{};
     if constexpr (rapids::IS_GPU_BUILD) {
       if (get_deployment_type() == rapids::GPUDeployment) {
@@ -62,10 +80,17 @@ struct RapidsModel : rapids::Model<RapidsSharedState> {
     }
 
     auto X_workplace = rapids::Buffer<float>(n_cols * n_rows, memory_type, get_device_id(), get_stream());
+    if (memory_type == rapids::DeviceMemory) {
+      gpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
+                n_components, n_cols, n_rows, get_stream());
+    }
+    else {
+      cpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
+                n_components, n_cols, n_rows);
+    }
 
-    gpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
-              n_components, n_cols, n_rows, get_stream());
     X_transformed.finalize();
+
   }
 
   auto load_file(const std::string& file_path, std::size_t expected_size, const rapids::MemoryType& memory_type) {
@@ -74,9 +99,9 @@ struct RapidsModel : rapids::Model<RapidsSharedState> {
     if (data_vector.size() != expected_size) {
       throw "Invalid size. Expected " + std::to_string(expected_size) + " but got " + std::to_string(data_vector.size());
     }
-    auto result = rapids::Buffer<float>(data_vector.size(), memory_type, get_device_id());
+    auto result = rapids::Buffer<float>(data_vector.size() / sizeof (float), memory_type, get_device_id());
     rapids::copy(result, rapids::Buffer<float>(reinterpret_cast<float*>(data_vector.data()),
-                                               data_vector.size(),
+                                               data_vector.size() / sizeof (float),
                                                rapids::HostMemory));
     return result;
   }
@@ -102,13 +127,13 @@ struct RapidsModel : rapids::Model<RapidsSharedState> {
       throw std::exception();
     }
     rapids::log_info(__FILE__, __LINE__) << "Loading components vector";
-    components = std::move(load_file(get_filepath() + "/components.bin",
+    components = load_file(get_filepath() + "/components.bin",
                            n_components * n_cols * sizeof(float),
-                           memory_type));
+                           memory_type);
     rapids::log_info(__FILE__, __LINE__) << "Loading mu vector";
-    mu = std::move(load_file(get_filepath() + "/mu.bin",
+    mu = load_file(get_filepath() + "/mu.bin",
                    n_cols * sizeof(float),
-                   memory_type));
+                   memory_type);
   }
   void unload() {}
 

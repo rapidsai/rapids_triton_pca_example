@@ -28,10 +28,11 @@
 namespace triton { namespace backend { namespace NAMESPACE {
     void gpu_infer(const float* X_input, float* X_transformed, const float* mu, const float* components, float* X_workplace,
                    std::size_t n_components, std::size_t n_cols, std::size_t n_rows, cudaStream_t stream) {
-        raft::stats::meanCenter(X_workplace, X_input, mu, n_cols, n_rows, false, true, stream);
+        raft::stats::meanCenter(X_workplace, X_input, mu, n_cols, n_rows, true, true, stream);
         float alpha = 1;
         float beta  = 0;
-        auto handle = raft::handle_t();
+        auto handle = raft::handle_t(1);
+
         handle.set_stream(stream);
         raft::linalg::gemm(handle,
                            X_workplace,
