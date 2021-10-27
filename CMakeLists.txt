@@ -109,7 +109,6 @@ endif()
 ##############################################################################
 # - install targets-----------------------------------------------------------
 
-# TODO(template): Add any additional source files below
 add_library(
   ${BACKEND_TARGET} SHARED
   src/gpu_infer.cu

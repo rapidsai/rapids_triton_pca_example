@@ -67,22 +67,15 @@ struct RapidsModel : rapids::Model<RapidsSharedState> {
     auto n_components = get_shared_state()->n_components;
     auto n_cols = get_shared_state()->n_cols;
     auto n_rows = X_input.shape()[0];
-    auto memory_type = rapids::MemoryType{};
-    if constexpr (rapids::IS_GPU_BUILD) {
-      if (get_deployment_type() == rapids::GPUDeployment) {
-        memory_type = rapids::DeviceMemory;
-        rapids::cuda_check(cudaSetDevice(get_device_id()));
-      } else {
-        memory_type = rapids::HostMemory;
-      }
-    } else {
-      memory_type = rapids::HostMemory;
-    }
+    auto memory_type = X_input.mem_type();
 
     auto X_workplace = rapids::Buffer<float>(n_cols * n_rows, memory_type, get_device_id(), get_stream());
     if (memory_type == rapids::DeviceMemory) {
       gpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
                 n_components, n_cols, n_rows, get_stream());
+      rapids::detail::copy( 
+        X_transformed.data(), X_workplace.data(),
+        X_transformed.size(), get_stream(), memory_type, memory_type);
     }
     else {
       cpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
