@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <raft/handle.hpp>
 #include <raft/linalg/gemm.cuh>
+#include <raft/linalg/transpose.h>
 #include <raft/stats/mean_center.cuh>
 #include <rapids_triton/batch/batch.hpp>
 #include <rapids_triton/tensor/tensor.hpp>
@@ -36,17 +37,19 @@ namespace triton { namespace backend { namespace NAMESPACE {
         handle.set_stream(stream);
         raft::linalg::gemm(handle,
                            X_workplace,
-                           n_rows,
-                           n_cols,
+                           static_cast<int>(n_cols),
+                           static_cast<int>(n_rows),
                            components,
                            X_transformed,
-                           n_rows,
-                           n_components,
-                           CUBLAS_OP_N,
+                           static_cast<int>(n_rows),
+                           static_cast<int>(n_components),
+                           CUBLAS_OP_T,
                            CUBLAS_OP_T,
                            alpha,
                            beta,
                            stream);
+        raft::linalg::transpose(handle, X_transformed, X_workplace,
+            static_cast<int>(n_rows), static_cast<int>(n_components), stream);
     }
 
 }}}
