@@ -73,9 +73,7 @@ struct RapidsModel : rapids::Model<RapidsSharedState> {
     if (memory_type == rapids::DeviceMemory) {
       gpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
                 n_components, n_cols, n_rows, get_stream());
-      rapids::detail::copy( 
-        X_transformed.data(), X_workplace.data(),
-        X_transformed.size(), get_stream(), memory_type, memory_type);
+      rapids::copy(X_transformed.buffer(), X_workplace, 0, X_transformed.size());
     }
     else {
       cpu_infer(X_input.data(), X_transformed.data(), mu.data(), components.data(), X_workplace.data(),
